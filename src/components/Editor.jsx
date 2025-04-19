@@ -1,9 +1,10 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { saveAs } from 'file-saver';
 import * as htmlToImage from 'html-to-image';
 import TextLayer from './TextLayer';
 import Toolbar from './Toolbar';
 import ImageUploader from './ImageUploader';
+import TextFormatPanel from './TextFormatPanel';
 import { captureCompositeImage } from '../utils/imageUtils';
 import useTextElements from '../hooks/useTextElements';
 import useImageHandler from '../hooks/useImageHandler';
@@ -36,8 +37,16 @@ const Editor = () => {
     areImagesLoaded
   } = useImageHandler();
   
+  // State for showing/hiding the advanced format panel
+  const [showFormatPanel, setShowFormatPanel] = useState(false);
+  
   // Ref for the editor container
   const editorRef = useRef(null);
+  
+  // Toggle format panel visibility
+  const toggleFormatPanel = () => {
+    setShowFormatPanel(prev => !prev);
+  };
   
   // Handle click outside of text elements to deselect
   const handleEditorClick = (e) => {
@@ -66,6 +75,24 @@ const Editor = () => {
       alert('Failed to export image. Please try again.');
     }
   }, [backgroundImage, foregroundImage]);
+  
+  // Clone the selected text element
+  const handleCloneElement = () => {
+    if (selectedElement) {
+      const clonedElement = {
+        ...selectedElement,
+        id: `text-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        position: {
+          x: selectedElement.position.x + 20,
+          y: selectedElement.position.y + 20
+        }
+      };
+      
+      const newElements = [...textElements, clonedElement];
+      textElements.push(clonedElement);
+      selectTextElement(clonedElement.id);
+    }
+  };
   
   // Render image upload section if images aren't loaded
   if (!areImagesLoaded) {
@@ -127,6 +154,24 @@ const Editor = () => {
           <option value="normal">Normal</option>
         </select>
         
+        {selectedElement && (
+          <button
+            className="ml-4 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition"
+            onClick={toggleFormatPanel}
+          >
+            {showFormatPanel ? 'Hide' : 'Show'} Advanced Options
+          </button>
+        )}
+        
+        {selectedElement && (
+          <button
+            className="ml-2 bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition"
+            onClick={handleCloneElement}
+          >
+            Clone Text
+          </button>
+        )}
+        
         <button
           className="ml-auto bg-secondary text-white px-4 py-2 rounded hover:bg-green-600 transition"
           onClick={handleExport}
@@ -134,6 +179,16 @@ const Editor = () => {
           Export Image
         </button>
       </div>
+      
+      {/* Format Panel */}
+      {showFormatPanel && selectedElement && (
+        <div className="mb-4">
+          <TextFormatPanel
+            selectedElement={selectedElement}
+            onUpdateElement={updateTextElement}
+          />
+        </div>
+      )}
       
       <div 
         ref={editorRef}
