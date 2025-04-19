@@ -34,6 +34,17 @@ export const createNewTextElement = (options = {}) => {
     opacity: options.opacity || 1,
     rotation: options.rotation || 0,
     zIndex: options.zIndex || 1,
+    
+    // Advanced text formatting properties
+    letterSpacing: options.letterSpacing || 0,
+    lineHeight: options.lineHeight || 1.2,
+    textTransform: options.textTransform || 'none',
+    textShadow: options.textShadow || {
+      offsetX: 0,
+      offsetY: 0,
+      blur: 0,
+      color: '#000000'
+    }
   };
 };
 
@@ -56,6 +67,12 @@ export const textElementToStyle = (textElement) => {
     zIndex: textElement.zIndex,
     width: `${textElement.size.width}px`,
     height: `${textElement.size.height}px`,
+    letterSpacing: textElement.letterSpacing ? `${textElement.letterSpacing}px` : 'normal',
+    lineHeight: textElement.lineHeight || 'normal',
+    textTransform: textElement.textTransform || 'none',
+    textShadow: textElement.textShadow ? 
+      `${textElement.textShadow.offsetX}px ${textElement.textShadow.offsetY}px ${textElement.textShadow.blur}px ${textElement.textShadow.color}` 
+      : 'none'
   };
 };
 
@@ -90,4 +107,20 @@ export const isPointInElement = (point, element) => {
     point.y >= element.position.y &&
     point.y <= element.position.y + element.size.height
   );
+};
+
+/**
+ * Clone a text element with a new ID and slight position offset
+ * @param {Object} element - The text element to clone
+ * @returns {Object} A new text element with unique ID
+ */
+export const cloneTextElement = (element) => {
+  return {
+    ...element,
+    id: generateUniqueId(),
+    position: {
+      x: element.position.x + 20,
+      y: element.position.y + 20
+    }
+  };
 };
