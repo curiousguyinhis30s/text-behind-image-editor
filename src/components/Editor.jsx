@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { saveAs } from 'file-saver';
 import * as htmlToImage from 'html-to-image';
 import TextLayer from './TextLayer';
@@ -24,7 +24,13 @@ const Editor = () => {
     updateTextElement,
     deleteTextElement,
     selectTextElement,
-    deselectTextElement
+    deselectTextElement,
+    cloneTextElement,
+    handleKeyboardShortcut,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useTextElements();
   
   const {
@@ -41,13 +47,32 @@ const Editor = () => {
   // State for UI elements
   const [showFormatPanel, setShowFormatPanel] = useState(false);
   const [showExportPreview, setShowExportPreview] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
   // Ref for the editor container
   const editorRef = useRef(null);
   
+  // Set up keyboard event listeners
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      handleKeyboardShortcut(e);
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyboardShortcut]);
+  
   // Toggle format panel visibility
   const toggleFormatPanel = () => {
     setShowFormatPanel(prev => !prev);
+  };
+  
+  // Toggle keyboard shortcuts help
+  const toggleKeyboardShortcuts = () => {
+    setShowKeyboardShortcuts(prev => !prev);
   };
   
   // Show export preview
@@ -91,18 +116,7 @@ const Editor = () => {
   // Clone the selected text element
   const handleCloneElement = () => {
     if (selectedElement) {
-      const clonedElement = {
-        ...selectedElement,
-        id: `text-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        position: {
-          x: selectedElement.position.x + 20,
-          y: selectedElement.position.y + 20
-        }
-      };
-      
-      const newElements = [...textElements, clonedElement];
-      textElements.push(clonedElement);
-      selectTextElement(clonedElement.id);
+      cloneTextElement(selectedElement.id);
     }
   };
   
@@ -150,7 +164,64 @@ const Editor = () => {
           onAddText={addTextElement}
           onDeleteElement={deleteTextElement}
         />
+        
+        {/* Undo/Redo Buttons */}
+        <div className="flex mt-2 space-x-2">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className={`px-3 py-1 rounded flex items-center ${canUndo ? 'bg-blue-100 hover:bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-400'}`}
+            title="Undo (Ctrl+Z)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Undo
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className={`px-3 py-1 rounded flex items-center ${canRedo ? 'bg-blue-100 hover:bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-400'}`}
+            title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+            Redo
+          </button>
+          
+          <button
+            onClick={toggleKeyboardShortcuts}
+            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 ml-auto"
+          >
+            Keyboard Shortcuts
+          </button>
+        </div>
       </div>
+      
+      {/* Keyboard Shortcuts Panel */}
+      {showKeyboardShortcuts && (
+        <div className="mb-4 p-4 bg-white rounded shadow-md border">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-semibold">Keyboard Shortcuts</h3>
+            <button onClick={toggleKeyboardShortcuts} className="text-gray-500 hover:text-gray-700">
+              &times;
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="mb-1"><strong>Ctrl+Z</strong>: Undo</div>
+              <div className="mb-1"><strong>Ctrl+Y</strong> or <strong>Ctrl+Shift+Z</strong>: Redo</div>
+              <div className="mb-1"><strong>Delete</strong> or <strong>Backspace</strong>: Delete selected element</div>
+            </div>
+            <div>
+              <div className="mb-1"><strong>Ctrl+D</strong>: Duplicate selected element</div>
+              <div className="mb-1"><strong>Escape</strong>: Deselect element</div>
+              <div className="mb-1"><strong>Ctrl+S</strong>: Quick export</div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="mb-4 flex items-center flex-wrap gap-2">
         <label htmlFor="blendMode" className="mr-2">Foreground Blend Mode:</label>
@@ -179,6 +250,7 @@ const Editor = () => {
           <button
             className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition"
             onClick={handleCloneElement}
+            title="Clone Text (Ctrl+D)"
           >
             Clone Text
           </button>
@@ -188,6 +260,7 @@ const Editor = () => {
           <button
             className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
             onClick={handleQuickExport}
+            title="Quick Export (Ctrl+S)"
           >
             Quick Export
           </button>
@@ -249,6 +322,7 @@ const Editor = () => {
         </p>
         <p className="mt-2">
           <strong>Tip:</strong> For best results, use a foreground image with transparent background (PNG format).
+          Press the "Keyboard Shortcuts" button to see available shortcuts.
         </p>
       </div>
       
