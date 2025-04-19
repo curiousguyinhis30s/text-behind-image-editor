@@ -1,91 +1,48 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { saveAs } from 'file-saver';
 import * as htmlToImage from 'html-to-image';
 import TextLayer from './TextLayer';
 import Toolbar from './Toolbar';
 import ImageUploader from './ImageUploader';
-import { createObjectURL, revokeObjectURL, captureCompositeImage } from '../utils/imageUtils';
-import { createNewTextElement } from '../utils/textUtils';
+import { captureCompositeImage } from '../utils/imageUtils';
+import useTextElements from '../hooks/useTextElements';
+import useImageHandler from '../hooks/useImageHandler';
 
 /**
  * Editor is the main component that combines all the functionality
  * of the text-behind-image editor into a complete editing experience.
  */
 const Editor = () => {
-  // State for images
-  const [backgroundImage, setBackgroundImage] = useState(null);
-  const [foregroundImage, setForegroundImage] = useState(null);
-  const [bgImageUrl, setBgImageUrl] = useState('');
-  const [fgImageUrl, setFgImageUrl] = useState('');
+  // Use custom hooks for text and image management
+  const {
+    textElements,
+    selectedElementId,
+    selectedElement,
+    addTextElement,
+    updateTextElement,
+    deleteTextElement,
+    selectTextElement,
+    deselectTextElement
+  } = useTextElements();
   
-  // State for text elements
-  const [textElements, setTextElements] = useState([]);
-  const [selectedElementId, setSelectedElementId] = useState(null);
-  
-  // State for blend mode
-  const [blendMode, setBlendMode] = useState('multiply');
+  const {
+    backgroundImage,
+    foregroundImage,
+    bgImageUrl,
+    fgImageUrl,
+    blendMode,
+    setBlendMode,
+    handleImageUpload,
+    areImagesLoaded
+  } = useImageHandler();
   
   // Ref for the editor container
   const editorRef = useRef(null);
   
-  // Get selected text element
-  const selectedElement = textElements.find(el => el.id === selectedElementId);
-  
-  // Handle background image upload
-  const handleBackgroundImageUpload = (file) => {
-    if (bgImageUrl) {
-      revokeObjectURL(bgImageUrl);
-    }
-    const url = createObjectURL(file);
-    setBackgroundImage(file);
-    setBgImageUrl(url);
-  };
-  
-  // Handle foreground image upload
-  const handleForegroundImageUpload = (file) => {
-    if (fgImageUrl) {
-      revokeObjectURL(fgImageUrl);
-    }
-    const url = createObjectURL(file);
-    setForegroundImage(file);
-    setFgImageUrl(url);
-  };
-  
-  // Handle image upload based on type
-  const handleImageUpload = (file, type) => {
-    if (type === 'background') {
-      handleBackgroundImageUpload(file);
-    } else if (type === 'foreground') {
-      handleForegroundImageUpload(file);
-    }
-  };
-  
-  // Add new text element
-  const handleAddText = () => {
-    const newTextElement = createNewTextElement();
-    setTextElements([...textElements, newTextElement]);
-    setSelectedElementId(newTextElement.id);
-  };
-  
-  // Update text element
-  const handleUpdateElement = (updatedElement) => {
-    setTextElements(
-      textElements.map(el => (el.id === updatedElement.id ? updatedElement : el))
-    );
-  };
-  
-  // Delete text element
-  const handleDeleteElement = (id) => {
-    setTextElements(textElements.filter(el => el.id !== id));
-    if (selectedElementId === id) {
-      setSelectedElementId(null);
-    }
-  };
-  
   // Handle click outside of text elements to deselect
   const handleEditorClick = (e) => {
     if (e.target === editorRef.current) {
-      setSelectedElementId(null);
+      deselectTextElement();
     }
   };
   
@@ -111,7 +68,7 @@ const Editor = () => {
   }, [backgroundImage, foregroundImage]);
   
   // Render image upload section if images aren't loaded
-  if (!backgroundImage || !foregroundImage) {
+  if (!areImagesLoaded) {
     return (
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6">Text Behind Image Editor</h1>
@@ -150,9 +107,9 @@ const Editor = () => {
       <div className="mb-6">
         <Toolbar
           selectedElement={selectedElement}
-          onUpdateElement={handleUpdateElement}
-          onAddText={handleAddText}
-          onDeleteElement={handleDeleteElement}
+          onUpdateElement={updateTextElement}
+          onAddText={addTextElement}
+          onDeleteElement={deleteTextElement}
         />
       </div>
       
@@ -194,9 +151,9 @@ const Editor = () => {
         <TextLayer
           textElements={textElements}
           selectedElementId={selectedElementId}
-          onSelectElement={setSelectedElementId}
-          onUpdateElement={handleUpdateElement}
-          onDeleteElement={handleDeleteElement}
+          onSelectElement={selectTextElement}
+          onUpdateElement={updateTextElement}
+          onDeleteElement={deleteTextElement}
         />
         
         {fgImageUrl && (
