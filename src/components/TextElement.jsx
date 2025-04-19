@@ -16,7 +16,38 @@ const TextElement = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef(null);
-  const style = textElementToStyle(element);
+
+  // Generate style for the text element including advanced formatting options
+  const generateTextStyle = () => {
+    const baseStyle = textElementToStyle(element);
+    
+    // Add advanced formatting properties
+    const advancedStyle = {
+      letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
+      lineHeight: element.lineHeight || 'normal',
+      textTransform: element.textTransform || 'none',
+      textShadow: element.textShadow ? 
+        `${element.textShadow.offsetX}px ${element.textShadow.offsetY}px ${element.textShadow.blur}px ${element.textShadow.color}` 
+        : 'none'
+    };
+    
+    return {
+      ...baseStyle,
+      ...advancedStyle,
+      cursor: isEditing ? 'text' : 'move',
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: baseStyle.textAlign === 'center' ? 'center' : 
+                      baseStyle.textAlign === 'right' ? 'flex-end' : 'flex-start',
+      pointerEvents: editable ? 'auto' : 'none',
+      userSelect: isEditing ? 'text' : 'none',
+      overflow: 'hidden'
+    };
+  };
+  
+  const style = generateTextStyle();
 
   // Set focus on text element when editing starts
   useEffect(() => {
@@ -98,19 +129,7 @@ const TextElement = ({
         onInput={handleTextChange}
         onKeyDown={handleKeyDown}
         className="editable-text"
-        style={{
-          ...style,
-          cursor: isEditing ? 'text' : 'move',
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: style.textAlign === 'center' ? 'center' : 
-                         style.textAlign === 'right' ? 'flex-end' : 'flex-start',
-          pointerEvents: editable ? 'auto' : 'none',
-          userSelect: isEditing ? 'text' : 'none',
-          overflow: 'hidden'
-        }}
+        style={style}
       >
         {element.text}
       </div>
