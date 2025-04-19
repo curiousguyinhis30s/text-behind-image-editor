@@ -5,6 +5,7 @@ import TextLayer from './TextLayer';
 import Toolbar from './Toolbar';
 import ImageUploader from './ImageUploader';
 import TextFormatPanel from './TextFormatPanel';
+import ExportPreview from './ExportPreview';
 import { captureCompositeImage } from '../utils/imageUtils';
 import useTextElements from '../hooks/useTextElements';
 import useImageHandler from '../hooks/useImageHandler';
@@ -37,8 +38,9 @@ const Editor = () => {
     areImagesLoaded
   } = useImageHandler();
   
-  // State for showing/hiding the advanced format panel
+  // State for UI elements
   const [showFormatPanel, setShowFormatPanel] = useState(false);
+  const [showExportPreview, setShowExportPreview] = useState(false);
   
   // Ref for the editor container
   const editorRef = useRef(null);
@@ -46,6 +48,16 @@ const Editor = () => {
   // Toggle format panel visibility
   const toggleFormatPanel = () => {
     setShowFormatPanel(prev => !prev);
+  };
+  
+  // Show export preview
+  const openExportPreview = () => {
+    setShowExportPreview(true);
+  };
+  
+  // Hide export preview
+  const closeExportPreview = () => {
+    setShowExportPreview(false);
   };
   
   // Handle click outside of text elements to deselect
@@ -60,8 +72,8 @@ const Editor = () => {
     setBlendMode(e.target.value);
   };
   
-  // Export image with text behind foreground
-  const handleExport = useCallback(async () => {
+  // Quick export image with text behind foreground
+  const handleQuickExport = useCallback(async () => {
     if (!editorRef.current || !backgroundImage || !foregroundImage) {
       alert('Please upload both background and foreground images before exporting.');
       return;
@@ -140,7 +152,7 @@ const Editor = () => {
         />
       </div>
       
-      <div className="mb-4 flex items-center">
+      <div className="mb-4 flex items-center flex-wrap gap-2">
         <label htmlFor="blendMode" className="mr-2">Foreground Blend Mode:</label>
         <select
           id="blendMode"
@@ -165,19 +177,28 @@ const Editor = () => {
         
         {selectedElement && (
           <button
-            className="ml-2 bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition"
+            className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition"
             onClick={handleCloneElement}
           >
             Clone Text
           </button>
         )}
         
-        <button
-          className="ml-auto bg-secondary text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          onClick={handleExport}
-        >
-          Export Image
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
+            onClick={handleQuickExport}
+          >
+            Quick Export
+          </button>
+          
+          <button
+            className="bg-secondary text-white px-4 py-2 rounded hover:bg-green-600 transition"
+            onClick={openExportPreview}
+          >
+            Advanced Export
+          </button>
+        </div>
       </div>
       
       {/* Format Panel */}
@@ -230,6 +251,17 @@ const Editor = () => {
           <strong>Tip:</strong> For best results, use a foreground image with transparent background (PNG format).
         </p>
       </div>
+      
+      {/* Export Preview Modal */}
+      {showExportPreview && (
+        <ExportPreview
+          textElements={textElements}
+          bgImageUrl={bgImageUrl}
+          fgImageUrl={fgImageUrl}
+          blendMode={blendMode}
+          onClose={closeExportPreview}
+        />
+      )}
     </div>
   );
 };
